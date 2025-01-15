@@ -8,18 +8,70 @@ renderer.setSize( window.innerWidth, window.innerHeight );
 renderer.setAnimationLoop( animate );
 document.body.appendChild( renderer.domElement );
 
-const geometry = new THREE.BoxGeometry( 1, 1, 1 );
-const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
-const cube = new THREE.Mesh( geometry, material );
-scene.add( cube );
+const geometry = new THREE.PlaneGeometry(10, 20, 10, 20);
+const material = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
+const backwall = new THREE.Mesh(geometry, material);
+backwall.position.z = -5;
+scene.add(backwall); 
 
-camera.position.z = 5;
+const leftwall = new THREE.Mesh(geometry, material);
+leftwall.rotation.y = - Math.PI / 2;
+leftwall.position.x = -5;
+scene.add(leftwall);
 
-function animate() {
+const rightwall = new THREE.Mesh(geometry, material);
+rightwall.rotation.y = Math.PI / 2;
+rightwall.position.x = 5;
+scene.add(rightwall);
 
-	cube.rotation.x += 0.01;
-	cube.rotation.y += 0.01;
+camera.position.z = 30;
 
-	renderer.render( scene, camera );
+const floorGeometry = new THREE.PlaneGeometry(10, 10, 10, 10); 
+const floorMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, wireframe: true }); 
+const floor = new THREE.Mesh(floorGeometry, floorMaterial); 
+floor.rotation.x = - Math.PI / 2;
+floor.position.y = -10;
+scene.add(floor);
 
+
+function animate() { 
+    requestAnimationFrame(animate); 
+    renderer.render(scene, camera); 
+} 
+animate();
+
+const centerPosition = new THREE.Vector3(0, 0, 0); // zakładamy, że środek jest w (0, 0, 0)
+const cameraGroup = new THREE.Group();
+cameraGroup.position.copy(centerPosition);
+cameraGroup.add(camera);
+camera.position.z = 30;
+scene.add(cameraGroup);
+
+// Przenieś kamerę z grupy na odpowiednią pozycję w odniesieniu do środka
+camera.position.set(0, 0, 20); // ustal pozycję kamery względem środka
+camera.lookAt(centerPosition); // upewnij się, że kamera patrzy na środek
+
+document.addEventListener('keydown', onDocumentKeyDown, false);
+
+function onDocumentKeyDown(event) {
+    var keyCode = event.which;
+    if (keyCode == 37) {
+        // lewa strzałka
+        camera.position.x -= 1;
+    } else if (keyCode == 38) {
+        // górna strzałka
+        camera.position.y += 1;
+    } else if (keyCode == 39) {
+        // prawa strzałka
+        camera.position.x += 1;
+    } else if (keyCode == 40) {
+        // dolna strzałka
+        camera.position.y -= 1;
+    } else if (keyCode == 81) {
+        // Q
+        cameraGroup.rotation.y -= 0.05;
+    } else if (keyCode == 69) {
+        // E
+        cameraGroup.rotation.y += 0.05;
+    }
 }
