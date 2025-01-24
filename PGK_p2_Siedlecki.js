@@ -1,229 +1,357 @@
+// Import Three.js
 import * as THREE from 'three';
 
+// Create the scene
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 
+// Create a camera
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.z = 20;
+camera.position.y = 10;
+camera.rotation.x = 0;
+
+// Create the renderer
 const renderer = new THREE.WebGLRenderer();
-renderer.setSize( window.innerWidth, window.innerHeight );
-renderer.setAnimationLoop( animate );
-document.body.appendChild( renderer.domElement );
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-const geometry = new THREE.PlaneGeometry(10, 20, 10, 20);
-const material = new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true });
-const backwall = new THREE.Mesh(geometry, material);
-backwall.position.z = -5;
-scene.add(backwall); 
+// Add ambient light
+const ambientLight = new THREE.AmbientLight(0x404040, 1); // Soft white light
+scene.add(ambientLight);
 
-const leftwall = new THREE.Mesh(geometry, material);
-leftwall.rotation.y = - Math.PI / 2;
-leftwall.position.x = -5;
-scene.add(leftwall);
+// Add directional light from the front
+const frontLight = new THREE.DirectionalLight(0xffffff, 1.5);
+frontLight.position.set(0, 10, 10);
+scene.add(frontLight);
 
-const rightwall = new THREE.Mesh(geometry, material);
-rightwall.rotation.y = Math.PI / 2;
-rightwall.position.x = 5;
-scene.add(rightwall);
+// Add directional light from the side
+const sideLight = new THREE.DirectionalLight(0xffffff, 0.8);
+sideLight.position.set(10, 10, 0);
+scene.add(sideLight);
 
-camera.position.z = 30;
+// Add directional light from the back
+const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
+backLight.position.set(0, 10, -10);
+scene.add(backLight);
 
-const floorGeometry = new THREE.PlaneGeometry(10, 10, 10, 10); 
-const floorMaterial = new THREE.MeshBasicMaterial({ color: 0xaaaaaa, wireframe: true }); 
-const floor = new THREE.Mesh(floorGeometry, floorMaterial); 
-floor.rotation.x = - Math.PI / 2;
-floor.position.y = -10;
+// Add point light from above
+const topLight = new THREE.PointLight(0xffffff, 1, 100);
+topLight.position.set(0, 20, 0);
+scene.add(topLight);
+
+// Create the room (10x20)
+const roomWidth = 10;
+const roomHeight = 20;
+const roomDepth = 10;
+
+const floorGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
+const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x808080, side: THREE.DoubleSide });
+const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+floor.rotation.x = -Math.PI / 2;
 scene.add(floor);
-var tetrisTypes = [createTetrisIBlock(), createTetrisLBlock(), createTetrisZBlock(), createTetrisTBlock()];
-var tetrisBlocks = [];
-var tetrisBlock = spawnBlock();
-scene.add(tetrisBlock);
-tetrisBlocks.push(tetrisBlock);
-var fallSpeed = 0.001;
-var lines = floor.position.y + 0.5;
 
-function animate() { 
-    requestAnimationFrame(animate); 
-    
-    tetrisBlocks.at(tetrisBlocks.length - 1).position.y -= fallSpeed;
-    if (tetrisBlocks.at(tetrisBlocks.length - 1).position.y <= floor.position.y + 0.5) {
-        tetrisBlocks.at(tetrisBlocks.length - 1).position.y = floor.position.y + 0.5;
-        tetrisBlock = spawnBlock();
-        scene.add(tetrisBlock);
-        tetrisBlocks.push(tetrisBlock);
-    }
-    renderer.render(scene, camera); 
-} 
-animate();
+const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x404040, side: THREE.DoubleSide, transparent: true, opacity: 0.5 });
 
-const centerPosition = new THREE.Vector3(0, 0, 0); // zakładamy, że środek jest w (0, 0, 0)
-const cameraGroup = new THREE.Group();
-cameraGroup.position.copy(centerPosition);
-cameraGroup.add(camera);
-camera.position.z = 30;
-scene.add(cameraGroup);
+const backWallGeometry = new THREE.PlaneGeometry(roomWidth, roomHeight);
+const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
+backWall.position.z = -roomDepth / 2;
+backWall.position.y = roomHeight / 2;
+scene.add(backWall);
 
-// Przenieś kamerę z grupy na odpowiednią pozycję w odniesieniu do środka
-camera.position.set(0, 0, 20); // ustal pozycję kamery względem środka
-camera.lookAt(centerPosition); // upewnij się, że kamera patrzy na środek
+const leftWallGeometry = new THREE.PlaneGeometry(roomDepth, roomHeight);
+const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
+leftWall.rotation.y = Math.PI / 2;
+leftWall.position.x = -roomWidth / 2;
+leftWall.position.y = roomHeight / 2;
+scene.add(leftWall);
 
-document.addEventListener('keydown', onDocumentKeyDown);
+const rightWallGeometry = new THREE.PlaneGeometry(roomDepth, roomHeight);
+const rightWall = new THREE.Mesh(rightWallGeometry, wallMaterial);
+rightWall.rotation.y = -Math.PI / 2;
+rightWall.position.x = roomWidth / 2;
+rightWall.position.y = roomHeight / 2;
+scene.add(rightWall);
 
-function onDocumentKeyDown(event) {
-    var keyCode = event.which || event.keyCode;
-    if (keyCode == 81) {
-        // Q
-        cameraGroup.rotation.y -= 0.05;
-    } else if (keyCode == 69) {
-        // E
-        cameraGroup.rotation.y += 0.05;
-    }
-    if(lines != tetrisBlock.position.y){
-        if (keyCode == 65) {
-            // A
-            tetrisBlock.position.x -= 1;
-        } else if (keyCode == 87) {
-            // W
-            rotateBlockZ(tetrisBlock, keyCode);
-        } else if (keyCode == 68) {
-            // D
-            tetrisBlock.position.x += 1;
-        } else if (keyCode == 83) {
-            // S
-            rotateBlockZ(tetrisBlock, keyCode);
+// Define tetromino shapes
+const tetrominoes = [
+    // I
+    [
+        [1, 1, 1, 1]
+    ],
+    // O
+    [
+        [1, 1],
+        [1, 1]
+    ],
+    // T
+    [
+        [0, 1, 0],
+        [1, 1, 1]
+    ],
+    // S
+    [
+        [0, 1, 1],
+        [1, 1, 0]
+    ],
+    // Z
+    [
+        [1, 1, 0],
+        [0, 1, 1]
+    ],
+    // J
+    [
+        [1, 0, 0],
+        [1, 1, 1]
+    ],
+    // L
+    [
+        [0, 0, 1],
+        [1, 1, 1]
+    ]
+];
+
+// Function to create a tetromino mesh
+function createTetromino(shape) {
+    const group = new THREE.Group();
+    const material = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
+    shape.forEach((row, y) => {
+        row.forEach((value, x) => {
+            if (value) {
+                const geometry = new THREE.BoxGeometry(1, 1, 1);
+                const cube = new THREE.Mesh(geometry, material);
+                cube.position.set(x, -y, 0);
+                group.add(cube);
+            }
+        });
+    });
+    return group;
+}
+
+// Function to get a random tetromino
+function getRandomTetromino() {
+    const shape = tetrominoes[Math.floor(Math.random() * tetrominoes.length)];
+    const tetromino = createTetromino(shape);
+    tetromino.position.y = roomHeight - 1;
+    return tetromino;
+}
+
+// Create the initial tetromino
+let currentTetromino = getRandomTetromino();
+scene.add(currentTetromino);
+
+// Array to store all blocks
+let blocks = [];
+
+// Function to check for collisions
+function checkCollision(tetromino) {
+    for (let i = 0; i < tetromino.children.length; i++) {
+        const cube = tetromino.children[i];
+        const cubePosition = new THREE.Vector3();
+        cube.getWorldPosition(cubePosition);
+
+        // Check collision with floor
+        if (cubePosition.y <= 0.5) {
+            return true;
+        }
+
+        // Check collision with side walls
+        if (cubePosition.x < -roomWidth / 2 + 0.5 || cubePosition.x > roomWidth / 2 - 0.5) {
+            return true;
+        }
+
+        // Check collision with back and front walls
+        if (cubePosition.z < -roomDepth / 2 + 0.5 || cubePosition.z > roomDepth / 2 - 0.5) {
+            return true;
+        }
+
+        // Check collision with other blocks
+        for (let j = 0; j < blocks.length; j++) {
+            const block = blocks[j];
+            for (let k = 0; k < block.children.length; k++) {
+                const blockCube = block.children[k];
+                const blockCubePosition = new THREE.Vector3();
+                blockCube.getWorldPosition(blockCubePosition);
+
+                if (cubePosition.distanceTo(blockCubePosition) < 1) {
+                    return true;
+                }
+            }
         }
     }
+    return false;
 }
 
-function rotateBlockZ(block, keyCode) {
-    if (keyCode == 87) {
-        // Rotate the block by 90 degrees
-        block.rotation.z += Math.PI / 2;
-    } else if (keyCode == 83) {
-        // Rotate the block by -90 degrees
-        block.rotation.z -= Math.PI / 2;
+// Function to rotate a tetromino around its center
+function rotateTetromino(tetromino, direction) {
+    // Calculate the center of the tetromino
+    const box = new THREE.Box3().setFromObject(tetromino);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+
+    // Translate the tetromino to the origin
+    tetromino.position.sub(center);
+
+    // Rotate each block around the origin
+    const matrix = new THREE.Matrix4();
+    matrix.makeRotationZ(direction * Math.PI / 2);
+    tetromino.children.forEach(cube => {
+        cube.position.applyMatrix4(matrix);
+    });
+
+    // Translate the tetromino back to its original position
+    tetromino.position.add(center);
+}
+
+// Function to rotate the room around its center
+function rotateRoom(direction) {
+    const center = new THREE.Vector3(0, roomHeight / 2, 0);
+    const matrix = new THREE.Matrix4();
+    matrix.makeRotationY(THREE.MathUtils.degToRad(direction * 15));
+
+    camera.position.sub(center);
+    camera.position.applyMatrix4(matrix);
+    camera.position.add(center);
+    camera.lookAt(center);
+
+    console.log(`Camera rotated ${direction * 15} degrees`);
+}
+
+// Function to handle key presses
+function handleKeyPress(event) {
+    switch (event.key) {
+        case 'a':
+        case 'A':
+            // Move tetromino left
+            currentTetromino.position.x -= 1;
+            if (checkCollision(currentTetromino)) {
+                currentTetromino.position.x += 1;
+            }
+            break;
+        case 'd':
+        case 'D':
+            // Move tetromino right
+            currentTetromino.position.x += 1;
+            if (checkCollision(currentTetromino)) {
+                currentTetromino.position.x -= 1;
+            }
+            break;
+        case 'w':
+        case 'W':
+            // Move tetromino forward (into the screen)
+            currentTetromino.position.z -= 1;
+            if (checkCollision(currentTetromino)) {
+                currentTetromino.position.z += 1;
+            }
+            break;
+        case 's':
+        case 'S':
+            // Move tetromino backward (out of the screen)
+            currentTetromino.position.z += 1;
+            if (checkCollision(currentTetromino)) {
+                currentTetromino.position.z -= 1;
+            }
+            break;
+        case 'q':
+        case 'Q':
+            // Rotate tetromino counterclockwise
+            rotateTetromino(currentTetromino, 1);
+            if (checkCollision(currentTetromino)) {
+                rotateTetromino(currentTetromino, -1);
+            }
+            break;
+        case 'e':
+        case 'E':
+            // Rotate tetromino clockwise
+            rotateTetromino(currentTetromino, -1);
+            if (checkCollision(currentTetromino)) {
+                rotateTetromino(currentTetromino, 1);
+            }
+            break;
+        case 'ArrowLeft':
+            // Rotate room counterclockwise
+            rotateRoom(-1);
+            break;
+        case 'ArrowRight':
+            // Rotate room clockwise
+            rotateRoom(1);
+            break;
     }
 }
 
-function createTetrisLBlock() {
-    var group = new THREE.Group();
+// Add event listener for key presses
+document.addEventListener('keydown', handleKeyPress);
 
-    var geometry = new THREE.BoxGeometry(1, 1, 1);
-    var material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+// Function to remove filled lines
+function removeFilledLines() {
+    const lines = {};
 
-    // Create the individual cubes of the "L" block
-    var cube1 = new THREE.Mesh(geometry, material);
-    var cube2 = new THREE.Mesh(geometry, material);
-    var cube3 = new THREE.Mesh(geometry, material);
-    var cube4 = new THREE.Mesh(geometry, material);
+    // Collect all blocks by their y position
+    blocks.forEach(block => {
+        block.children.forEach(cube => {
+            const y = Math.round(cube.position.y);
+            if (!lines[y]) {
+                lines[y] = [];
+            }
+            lines[y].push(cube);
+        });
+    });
 
-    // Position the cubes to form an "L" shape
-    cube1.position.set(0, 0, 0);
-    cube2.position.set(1, 0, 0);
-    cube3.position.set(2, 0, 0);
-    cube4.position.set(2, 1, 0);
+    // Find and remove filled lines
+    Object.keys(lines).forEach(y => {
+        if (lines[y].length >= roomWidth) {
+            // Remove cubes in the filled line
+            lines[y].forEach(cube => {
+                cube.parent.remove(cube);
+                scene.remove(cube);
+            });
 
-    // Add the cubes to the group
-    group.add(cube1);
-    group.add(cube2);
-    group.add(cube3);
-    group.add(cube4);
+            // Move all blocks above the removed line down
+            blocks.forEach(block => {
+                block.children.forEach(cube => {
+                    if (Math.round(cube.position.y) > parseInt(y)) {
+                        cube.position.y -= 1;
+                    }
+                });
+            });
+        }
+    });
 
-    // Position the group
-    group.position.set(0.5, 11, -0.5); // Start above the ground
-
-    return group;
+    // Remove empty blocks
+    blocks = blocks.filter(block => block.children.length > 0);
 }
 
-function createTetrisZBlock() {
-    var group = new THREE.Group();
-
-    var geometry = new THREE.BoxGeometry(1, 1, 1);
-    var material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-
-    // Create the individual cubes of the "Z" block
-    var cube1 = new THREE.Mesh(geometry, material);
-    var cube2 = new THREE.Mesh(geometry, material);
-    var cube3 = new THREE.Mesh(geometry, material);
-    var cube4 = new THREE.Mesh(geometry, material);
-
-    // Position the cubes to form a "Z" shape
-    cube1.position.set(0, 0, 0);
-    cube2.position.set(1, 0, 0);
-    cube3.position.set(1, 1, 0);
-    cube4.position.set(2, 1, 0);
-
-    // Add the cubes to the group
-    group.add(cube1);
-    group.add(cube2);
-    group.add(cube3);
-    group.add(cube4);
-
-    // Position the group
-    group.position.set(0.5, 5, -0.5); // Start above the ground
-
-    return group;
+// Function to end the game
+function endGame() {
+    alert("Game Over!");
+    // Stop the animation loop
+    cancelAnimationFrame(animationId);
 }
 
-function createTetrisIBlock() {
-    var group = new THREE.Group();
+// Animation loop
+let animationId;
+function animate() {
+    animationId = requestAnimationFrame(animate);
 
-    var geometry = new THREE.BoxGeometry(1, 1, 1);
-    var material = new THREE.MeshBasicMaterial({ color: 0x0000ff });
+    // Move the tetromino down
+    currentTetromino.position.y -= 0.05;
+    if (checkCollision(currentTetromino)) {
+        currentTetromino.position.y += 0.05;
+        // Stop the tetromino at the collision point
+        blocks.push(currentTetromino.clone());
+        scene.add(currentTetromino.clone());
+        // Remove filled lines
+        removeFilledLines();
+        // Create a new tetromino
+        currentTetromino = getRandomTetromino();
+        if (checkCollision(currentTetromino)) {
+            endGame();
+            return;
+        }
+        scene.add(currentTetromino);
+    }
 
-    // Create the individual cubes of the "I" block
-    var cube1 = new THREE.Mesh(geometry, material);
-    var cube2 = new THREE.Mesh(geometry, material);
-    var cube3 = new THREE.Mesh(geometry, material);
-    var cube4 = new THREE.Mesh(geometry, material);
-
-    // Position the cubes to form an "I" shape
-    cube1.position.set(0, 0, 0);
-    cube2.position.set(1, 0, 0);
-    cube3.position.set(2, 0, 0);
-    cube4.position.set(3, 0, 0);
-
-    // Add the cubes to the group
-    group.add(cube1);
-    group.add(cube2);
-    group.add(cube3);
-    group.add(cube4);
-
-    // Position the group
-    group.position.set(0.5, 5, -0.5); // Start above the ground and to the far right
-
-    return group;
+    renderer.render(scene, camera);
 }
 
-function createTetrisTBlock() {
-    var group = new THREE.Group();
-
-    var geometry = new THREE.BoxGeometry(1, 1, 1);
-    var material = new THREE.MeshBasicMaterial({ color: 0xff00ff });
-
-    // Create the individual cubes of the "T" block
-    var cube1 = new THREE.Mesh(geometry, material);
-    var cube2 = new THREE.Mesh(geometry, material);
-    var cube3 = new THREE.Mesh(geometry, material);
-    var cube4 = new THREE.Mesh(geometry, material);
-
-    // Position the cubes to form a "T" shape
-    cube1.position.set(0, 0, 0);
-    cube2.position.set(1, 0, 0);
-    cube3.position.set(2, 0, 0);
-    cube4.position.set(1, 1, 0);
-
-    // Add the cubes to the group
-    group.add(cube1);
-    group.add(cube2);
-    group.add(cube3);
-    group.add(cube4);
-
-    // Position the group
-    group.position.set(0.5, 5, -0.5); // Start above the ground and to the right
-
-    return group;
-}
-
-function spawnBlock() {
-    var blockType = tetrisTypes[Math.floor(Math.random() * tetrisTypes.length)];
-    return blockType;
-}
+// Start the animation loop
+animate();
