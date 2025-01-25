@@ -72,6 +72,19 @@ rightWall.position.x = roomWidth / 2;
 rightWall.position.y = roomHeight / 2;
 scene.add(rightWall);
 
+// Load textures
+const textureLoader = new THREE.TextureLoader();
+const textures = [
+    textureLoader.load("texture/I-block_retro_texture.png"),
+    textureLoader.load('texture/O-block_retro_texture.png'),
+    textureLoader.load('texture/T-block_retro_texture.png'),
+    textureLoader.load('texture/S-block_retro_texture.png'),
+    textureLoader.load('texture/Z-block_retro_texture.png'),
+    textureLoader.load('texture/J-block_retro_texture.png'),
+    textureLoader.load('texture/L-block_retro_texture.png'),
+    
+];
+
 // Define tetromino shapes
 const tetrominoes = [
     // I
@@ -111,9 +124,9 @@ const tetrominoes = [
 ];
 
 // Function to create a tetromino mesh
-function createTetromino(shape) {
+function createTetromino(shape, texture) {
     const group = new THREE.Group();
-    const material = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff });
+    const material = new THREE.MeshStandardMaterial({ map: texture });
     shape.forEach((row, y) => {
         row.forEach((value, x) => {
             if (value) {
@@ -129,8 +142,10 @@ function createTetromino(shape) {
 
 // Function to get a random tetromino
 function getRandomTetromino() {
-    const shape = tetrominoes[Math.floor(Math.random() * tetrominoes.length)];
-    const tetromino = createTetromino(shape);
+    const shapeIndex = Math.floor(Math.random() * tetrominoes.length);
+    const shape = tetrominoes[shapeIndex];
+    const texture = textures[shapeIndex];
+    const tetromino = createTetromino(shape, texture);
     tetromino.position.y = roomHeight - 1;
     return tetromino;
 }
@@ -319,6 +334,14 @@ function removeFilledLines() {
                     lines[aboveY].forEach(cube => {
                         cube.position.y -= 1;
                     });
+                }
+            });
+
+            // Update lines object after moving blocks
+            Object.keys(lines).forEach(aboveY => {
+                if (parseInt(aboveY) > parseInt(y)) {
+                    lines[aboveY - 1] = lines[aboveY];
+                    delete lines[aboveY];
                 }
             });
         }
