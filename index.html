@@ -1,51 +1,69 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<title>Projekt Grafika</title>
-		<style>
-			body { margin: 0; overflow: hidden; }
-			#overlay {
-				position: absolute;
-				top: 0;
-				left: 0;
-				width: 100%;
-				height: 100%;
-				background: rgba(0, 0, 0, 0.8);
-				display: flex;
-				justify-content: center;
-				align-items: center;
-				flex-direction: column;
-				color: white;
-				font-size: 24px;
-				z-index: 10;
-			}
-			#overlay button {
-				margin: 10px;
-				padding: 10px 20px;
-				font-size: 18px;
-			}
-			#helpButtonInGame {
-				position: absolute;
-				top: 10px;
-				left: 10px;
-				padding: 10px 20px;
-				font-size: 18px;
-				z-index: 5;
-			}
-			#helpText {
-				position: absolute;
-				top: 50px;
-				left: 10px;
-				background: rgba(0, 0, 0, 0.8);
-				color: white;
-				padding: 10px;
-				display: none;
-				z-index: 5;
-			}
-    </style>
-		</style>
-	</head>
+    <head>
+        <meta charset="utf-8">
+        <title>Projekt Grafika</title>
+        <style>
+            body { margin: 0; overflow: hidden; }
+            #overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                flex-direction: column;
+                color: white;
+                font-size: 24px;
+                z-index: 10;
+            }
+            #overlay button {
+                margin: 10px;
+                padding: 10px 20px;
+                font-size: 18px;
+            }
+            #helpButtonInGame {
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                padding: 10px 20px;
+                font-size: 18px;
+                z-index: 5;
+            }
+            #helpText {
+                position: absolute;
+                top: 50px;
+                left: 10px;
+                background: rgba(0, 0, 0, 0.8);
+                color: white;
+                padding: 10px;
+                display: none;
+                z-index: 5;
+            }
+            #gameOverOverlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                color: white;
+                justify-content: center;
+                align-items: center;
+                flex-direction: column;
+                z-index: 20;
+            }
+            #gameOverOverlay button {
+                margin: 10px;
+                padding: 10px 20px;
+                font-size: 18px;
+            }
+        </style>
+    </head>
     <script type="importmap">
         {
           "imports": {
@@ -54,26 +72,31 @@
           }
         }
       </script>
-	<body>
-		<div id="overlay">
-			<button id="startButton">Start</button>
-			<button id="helpButton">Pomoc</button>
-			<div id="helpTextOverlay" style="display: none;">
-				<p>Klawiszologia:</p>
-				<p>A/D: Ruch w lewo/prawo</p>
-				<p>W/S: Ruch do przodu/tyłu</p>
-				<p>Q/E: Obrót</p>
-				<p>Strzałki: Obrót kamery</p>
-			</div>
-		</div>
-		<button id="helpButtonInGame" style="display: none;">Pomoc</button>
-		<div id="helpText">
-			<p>Klawiszologia:</p>
-			<p>A/D: Ruch w lewo/prawo</p>
-			<p>W/S: Ruch do przodu/tyłu</p>
-			<p>Q/E: Obrót</p>
-			<p>Strzałki lewo/prawo: Obrót kamery</p>
-		</div>
-		<script type="module" src="/main.js"></script>
-	</body>
+    <body>
+        <div id="overlay">
+            <button id="startButton">Start</button>
+            <button id="helpButton">Pomoc</button>
+            <div id="helpTextOverlay" style="display: none;">
+                <p>Klawiszologia:</p>
+                <p>A/D: Ruch w lewo/prawo</p>
+                <p>W/S: Ruch do przodu/tyłu</p>
+                <p>Q/E: Obrót</p>
+                <p>Strzałki: Obrót kamery</p>
+            </div>
+        </div>
+        <button id="helpButtonInGame" style="display: none;">Pomoc</button>
+        <div id="helpText">
+            <p>Klawiszologia:</p>
+            <p>A/D: Ruch w lewo/prawo</p>
+            <p>W/S: Ruch do przodu/tyłu</p>
+            <p>Q/E: Obrót</p>
+            <p>Strzałki lewo/prawo: Obrót kamery</p>
+        </div>
+        <div id="gameOverOverlay">
+            <h1>Game Over</h1>
+            <button id="restartButton">Start</button>
+            <button id="helpButtonGameOver">Pomoc</button>
+        </div>
+        <script type="module" src="/main.js"></script>
+    </body>
 </html>

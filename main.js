@@ -39,10 +39,10 @@ const topLight = new THREE.PointLight(0xffffff, 1, 100);
 topLight.position.set(0, 20, 0);
 scene.add(topLight);
 
-// Create the room (10x20)
-const roomWidth = 10;
+// Create the room (8x20x8)
+const roomWidth = 8;
 const roomHeight = 20;
-const roomDepth = 10;
+const roomDepth = 8;
 
 const floorGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
 const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x808080, side: THREE.DoubleSide });
@@ -137,6 +137,7 @@ function createTetromino(shape, texture) {
             }
         });
     });
+    group.shape = shape; // Store the shape matrix in the group
     return group;
 }
 
@@ -155,61 +156,62 @@ let currentTetromino;
 let blocks = [];
 let animationId;
 
-// Function to check for collisions
-function checkCollision(tetromino) {
-    for (let i = 0; i < tetromino.children.length; i++) {
-        const cube = tetromino.children[i];
-        const cubePosition = new THREE.Vector3();
-        cube.getWorldPosition(cubePosition);
-
-        // Check collision with floor
-        if (cubePosition.y <= 0.5) {
-            return true;
-        }
-
-        // Check collision with side walls
-        if (cubePosition.x < -roomWidth / 2 + 0.5 || cubePosition.x > roomWidth / 2 - 0.5) {
-            return true;
-        }
-
-        // Check collision with back and front walls
-        if (cubePosition.z < -roomDepth / 2 + 0.5 || cubePosition.z > roomDepth / 2 - 0.5) {
-            return true;
-        }
-
-        // Check collision with other blocks
-        for (let j = 0; j < blocks.length; j++) {
-            const blockCubePosition = new THREE.Vector3();
-            blocks[j].getWorldPosition(blockCubePosition);
-
-            if (cubePosition.distanceTo(blockCubePosition) < 1) {
-                return true;
-            }
+// Function to rotate a tetromino shape matrix
+function rotateMatrix(matrix) {
+    const rows = matrix.length;
+    const cols = matrix[0].length;
+    const result = Array.from({ length: cols }, () => Array(rows).fill(0));
+    for (let i = 0; i < rows; i++) {
+        for (let j = 0; j < cols; j++) {
+            result[j][rows - 1 - i] = matrix[i][j];
         }
     }
-    return false;
+    return result;
 }
 
 // Function to rotate a tetromino around its center
 function rotateTetromino(tetromino, direction) {
-    // Calculate the center of the tetromino
-    const box = new THREE.Box3().setFromObject(tetromino);
-    const center = new THREE.Vector3();
-    box.getCenter(center);
+    // Rotate the shape matrix
+    const newShape = rotateMatrix(tetromino.shape);
 
-    // Translate the tetromino to the origin
-    tetromino.position.sub(center);
+    // Clear the current tetromino group
+    const oldPosition = tetromino.position.clone();
+    scene.remove(tetromino);
 
-    // Rotate each block around the origin
-    const matrix = new THREE.Matrix4();
-    matrix.makeRotationZ(direction * Math.PI / 2);
-    tetromino.children.forEach(cube => {
-        cube.position.applyMatrix4(matrix);
+    // Create new cubes based on the rotated shape
+    const material = new THREE.MeshStandardMaterial({ map: tetromino.children[0].material.map });
+    const newTetromino = new THREE.Group();
+    newShape.forEach((row, y) => {
+        row.forEach((value, x) => {
+            if (value) {
+                const geometry = new THREE.BoxGeometry(1, 1, 1);
+                const cube = new THREE.Mesh(geometry, material);
+                cube.position.set(x, -y, 0);
+                newTetromino.add(cube);
+            }
+        });
     });
 
-    // Translate the tetromino back to its original position
-    tetromino.position.add(center);
+    newTetromino.shape = newShape; // Update the shape matrix in the group
+    newTetromino.position.copy(oldPosition);
+    scene.add(newTetromino);
+
+    // Check for collisions and adjust position if necessary
+    if (checkCollision(newTetromino)) {
+        // Try to move tetromino to the left or right to allow rotation
+        newTetromino.position.x -= 1;
+        if (checkCollision(newTetromino)) {
+            newTetromino.position.x += 2;
+            if (checkCollision(newTetromino)) {
+                newTetromino.position.x -= 1;
+                newTetromino = rotateTetromino(newTetromino, -direction); // Revert rotation if no valid position found
+            }
+        }
+    }
+
+    return newTetromino;
 }
+
 
 // Function to rotate the room around its center
 function rotateRoom(direction) {
@@ -263,7 +265,7 @@ function handleKeyPress(event) {
         case 'q':
         case 'Q':
             // Rotate tetromino counterclockwise
-            rotateTetromino(currentTetromino, 1);
+            currentTetromino = rotateTetromino(currentTetromino, 1);
             if (checkCollision(currentTetromino)) {
                 // Try to move tetromino to the left or right to allow rotation
                 currentTetromino.position.x -= 1;
@@ -271,7 +273,7 @@ function handleKeyPress(event) {
                     currentTetromino.position.x += 2;
                     if (checkCollision(currentTetromino)) {
                         currentTetromino.position.x -= 1;
-                        rotateTetromino(currentTetromino, -1);
+                        currentTetromino = rotateTetromino(currentTetromino, -1);
                     }
                 }
             }
@@ -279,7 +281,7 @@ function handleKeyPress(event) {
         case 'e':
         case 'E':
             // Rotate tetromino clockwise
-            rotateTetromino(currentTetromino, -1);
+            currentTetromino = rotateTetromino(currentTetromino, -1);
             if (checkCollision(currentTetromino)) {
                 // Try to move tetromino to the left or right to allow rotation
                 currentTetromino.position.x -= 1;
@@ -287,7 +289,7 @@ function handleKeyPress(event) {
                     currentTetromino.position.x += 2;
                     if (checkCollision(currentTetromino)) {
                         currentTetromino.position.x -= 1;
-                        rotateTetromino(currentTetromino, 1);
+                        currentTetromino = rotateTetromino(currentTetromino, 1);
                     }
                 }
             }
@@ -306,85 +308,143 @@ function handleKeyPress(event) {
 // Add event listener for key presses
 document.addEventListener('keydown', handleKeyPress);
 
-// Function to remove filled lines
+// Funkcja do usuwania wypełnionych poziomych linii
 function removeFilledLines() {
     const lines = {};
 
-    // Collect all blocks by their y position
+    // Grupowanie wszystkich bloków według ich pozycji y i z
     blocks.forEach(cube => {
-        const y = Math.round(cube.position.y);
+        const y = Math.round(cube.position.y); // Zaokrąglanie pozycji y do najbliższej liczby całkowitej
+        const z = Math.round(cube.position.z); // Zaokrąglanie pozycji z do najbliższej liczby całkowitej
         if (!lines[y]) {
-            lines[y] = [];
+            lines[y] = {};
         }
-        lines[y].push(cube);
+        if (!lines[y][z]) {
+            lines[y][z] = [];
+        }
+        lines[y][z].push(cube); // Dodawanie bloku do odpowiedniej tablicy
     });
 
-    // Find and remove filled lines
+    // Znajdowanie i usuwanie wypełnionych poziomych linii
     Object.keys(lines).forEach(y => {
-        if (lines[y].length >= roomWidth) {
-            // Remove cubes in the filled line
-            lines[y].forEach(cube => {
-                scene.remove(cube);
-                blocks = blocks.filter(block => block !== cube);
-            });
+        Object.keys(lines[y]).forEach(z => {
+            if (lines[y][z].length >= roomWidth - 1) { // Sprawdzanie, czy liczba bloków w linii jest równa szerokości pokoju
+                // Usuwanie bloków w wypełnionej linii
+                lines[y][z].forEach(cube => {
+                    scene.remove(cube); // Usuwanie bloku ze sceny
+                    blocks = blocks.filter(block => block !== cube); // Usuwanie bloku z tablicy blocks
+                });
 
-            // Move all blocks above the removed line down
-            Object.keys(lines).forEach(aboveY => {
-                if (parseInt(aboveY) > parseInt(y)) {
-                    lines[aboveY].forEach(cube => {
-                        cube.position.y -= 1;
-                    });
-                }
-            });
-
-            // Update lines object after moving blocks
-            Object.keys(lines).forEach(aboveY => {
-                if (parseInt(aboveY) > parseInt(y)) {
-                    lines[aboveY - 1] = lines[aboveY];
-                    delete lines[aboveY];
-                }
-            });
-        }
+                // Przesuwanie wszystkich bloków powyżej usuniętej linii w dół
+                Object.keys(lines).forEach(aboveY => {
+                    if (parseInt(aboveY) > parseInt(y)) {
+                        Object.keys(lines[aboveY]).forEach(aboveZ => {
+                            if (aboveZ === z) { // Sprawdzanie, czy blok znajduje się w tej samej pozycji z
+                                lines[aboveY][aboveZ].forEach(cube => {
+                                    cube.position.y -= 1; // Przesuwanie bloku w dół
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+        });
     });
+}
+
+// Funkcja do sprawdzania kolizji
+function checkCollision(tetromino) {
+    for (let i = 0; i < tetromino.children.length; i++) {
+        const cube = tetromino.children[i];
+        const cubePosition = new THREE.Vector3();
+        cube.getWorldPosition(cubePosition);
+
+        // Sprawdzanie kolizji z podłogą
+        if (cubePosition.y <= 0.5) {
+            return true;
+        }
+
+        // Sprawdzanie kolizji z bocznymi ścianami
+        if (cubePosition.x < -roomWidth / 2 + 0.5 || cubePosition.x > roomWidth / 2 - 0.5) {
+            return true;
+        }
+
+        // Sprawdzanie kolizji z tylną i przednią ścianą
+        if (cubePosition.z < -roomDepth / 2 + 0.5 || cubePosition.z > roomDepth / 2 - 0.5) {
+            return true;
+        }
+
+        // Sprawdzanie kolizji z innymi blokami
+        for (let j = 0; j < blocks.length; j++) {
+            const blockCubePosition = new THREE.Vector3();
+            blocks[j].getWorldPosition(blockCubePosition);
+
+            if (cubePosition.distanceTo(blockCubePosition) < 1) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+
+// Pętla animacji
+function animate() {
+    animationId = requestAnimationFrame(animate); // Żądanie kolejnej klatki animacji
+
+    // Przesuwanie tetromino w dół
+    currentTetromino.position.y -= 0.05; // Przesuwanie tetromino w dół o 0.05 jednostki
+    if (checkCollision(currentTetromino)) { // Sprawdzanie kolizji
+        currentTetromino.position.y += 0.05; // Cofanie ruchu, jeśli wystąpiła kolizja
+        // Zatrzymywanie tetromino w punkcie kolizji
+        currentTetromino.children.forEach(cube => {
+            const newCube = cube.clone(); // Klonowanie bloku
+            newCube.position.add(currentTetromino.position); // Dodawanie pozycji tetromino do pozycji bloku
+            scene.add(newCube); // Dodawanie nowego bloku do sceny
+            blocks.push(newCube); // Dodawanie nowego bloku do tablicy blocks
+        });
+        scene.remove(currentTetromino); // Usuwanie tetromino ze sceny
+        // Usuwanie wypełnionych poziomych linii
+        removeFilledLines();
+        // Tworzenie nowego tetromino
+        currentTetromino = getRandomTetromino();
+        if (checkCollision(currentTetromino)) { // Sprawdzanie kolizji dla nowego tetromino
+            endGame(); // Kończenie gry, jeśli nowo utworzone tetromino koliduje
+            return;
+        }
+        scene.add(currentTetromino); // Dodawanie nowego tetromino do sceny
+    }
+
+    renderer.render(scene, camera); // Renderowanie sceny z użyciem kamery
 }
 
 // Function to end the game
 function endGame() {
-    alert("Game Over!");
     // Stop the animation loop
     cancelAnimationFrame(animationId);
-    showOverlay();
+    showGameOverOverlay();
 }
 
-// Animation loop
-function animate() {
-    animationId = requestAnimationFrame(animate);
-
-    // Move the tetromino down
-    currentTetromino.position.y -= 0.05;
-    if (checkCollision(currentTetromino)) {
-        currentTetromino.position.y += 0.05;
-        // Stop the tetromino at the collision point
-        currentTetromino.children.forEach(cube => {
-            const newCube = cube.clone();
-            newCube.position.add(currentTetromino.position);
-            scene.add(newCube);
-            blocks.push(newCube);
-        });
-        scene.remove(currentTetromino);
-        // Remove filled lines
-        removeFilledLines();
-        // Create a new tetromino
-        currentTetromino = getRandomTetromino();
-        if (checkCollision(currentTetromino)) {
-            endGame();
-            return;
-        }
-        scene.add(currentTetromino);
-    }
-
-    renderer.render(scene, camera);
+// Function to show the game over overlay
+function showGameOverOverlay() {
+    document.getElementById('gameOverOverlay').style.display = 'flex';
 }
+
+// Function to hide the game over overlay
+function hideGameOverOverlay() {
+    document.getElementById('gameOverOverlay').style.display = 'none';
+}
+
+// Event listeners for game over buttons
+document.getElementById('restartButton').addEventListener('click', () => {
+    hideGameOverOverlay();
+    startGame();
+});
+
+document.getElementById('helpButtonGameOver').addEventListener('click', () => {
+    const helpText = document.getElementById('helpTextOverlay');
+    helpText.style.display = helpText.style.display === 'none' ? 'block' : 'none';
+});
 
 // Function to start the game
 function startGame() {
