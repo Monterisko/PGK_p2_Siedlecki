@@ -136,11 +136,9 @@ function getRandomTetromino() {
 }
 
 // Create the initial tetromino
-let currentTetromino = getRandomTetromino();
-scene.add(currentTetromino);
-
-// Array to store all blocks
+let currentTetromino;
 let blocks = [];
+let animationId;
 
 // Function to check for collisions
 function checkCollision(tetromino) {
@@ -166,15 +164,11 @@ function checkCollision(tetromino) {
 
         // Check collision with other blocks
         for (let j = 0; j < blocks.length; j++) {
-            const block = blocks[j];
-            for (let k = 0; k < block.children.length; k++) {
-                const blockCube = block.children[k];
-                const blockCubePosition = new THREE.Vector3();
-                blockCube.getWorldPosition(blockCubePosition);
+            const blockCubePosition = new THREE.Vector3();
+            blocks[j].getWorldPosition(blockCubePosition);
 
-                if (cubePosition.distanceTo(blockCubePosition) < 1) {
-                    return true;
-                }
+            if (cubePosition.distanceTo(blockCubePosition) < 1) {
+                return true;
             }
         }
     }
@@ -256,7 +250,15 @@ function handleKeyPress(event) {
             // Rotate tetromino counterclockwise
             rotateTetromino(currentTetromino, 1);
             if (checkCollision(currentTetromino)) {
-                rotateTetromino(currentTetromino, -1);
+                // Try to move tetromino to the left or right to allow rotation
+                currentTetromino.position.x -= 1;
+                if (checkCollision(currentTetromino)) {
+                    currentTetromino.position.x += 2;
+                    if (checkCollision(currentTetromino)) {
+                        currentTetromino.position.x -= 1;
+                        rotateTetromino(currentTetromino, -1);
+                    }
+                }
             }
             break;
         case 'e':
@@ -264,7 +266,15 @@ function handleKeyPress(event) {
             // Rotate tetromino clockwise
             rotateTetromino(currentTetromino, -1);
             if (checkCollision(currentTetromino)) {
-                rotateTetromino(currentTetromino, 1);
+                // Try to move tetromino to the left or right to allow rotation
+                currentTetromino.position.x -= 1;
+                if (checkCollision(currentTetromino)) {
+                    currentTetromino.position.x += 2;
+                    if (checkCollision(currentTetromino)) {
+                        currentTetromino.position.x -= 1;
+                        rotateTetromino(currentTetromino, 1);
+                    }
+                }
             }
             break;
         case 'ArrowLeft':
@@ -286,14 +296,12 @@ function removeFilledLines() {
     const lines = {};
 
     // Collect all blocks by their y position
-    blocks.forEach(block => {
-        block.children.forEach(cube => {
-            const y = Math.round(cube.position.y);
-            if (!lines[y]) {
-                lines[y] = [];
-            }
-            lines[y].push(cube);
-        });
+    blocks.forEach(cube => {
+        const y = Math.round(cube.position.y);
+        if (!lines[y]) {
+            lines[y] = [];
+        }
+        lines[y].push(cube);
     });
 
     // Find and remove filled lines
@@ -301,23 +309,20 @@ function removeFilledLines() {
         if (lines[y].length >= roomWidth) {
             // Remove cubes in the filled line
             lines[y].forEach(cube => {
-                cube.parent.remove(cube);
                 scene.remove(cube);
+                blocks = blocks.filter(block => block !== cube);
             });
 
             // Move all blocks above the removed line down
-            blocks.forEach(block => {
-                block.children.forEach(cube => {
-                    if (Math.round(cube.position.y) > parseInt(y)) {
+            Object.keys(lines).forEach(aboveY => {
+                if (parseInt(aboveY) > parseInt(y)) {
+                    lines[aboveY].forEach(cube => {
                         cube.position.y -= 1;
-                    }
-                });
+                    });
+                }
             });
         }
     });
-
-    // Remove empty blocks
-    blocks = blocks.filter(block => block.children.length > 0);
 }
 
 // Function to end the game
@@ -325,10 +330,10 @@ function endGame() {
     alert("Game Over!");
     // Stop the animation loop
     cancelAnimationFrame(animationId);
+    showOverlay();
 }
 
 // Animation loop
-let animationId;
 function animate() {
     animationId = requestAnimationFrame(animate);
 
@@ -337,8 +342,13 @@ function animate() {
     if (checkCollision(currentTetromino)) {
         currentTetromino.position.y += 0.05;
         // Stop the tetromino at the collision point
-        blocks.push(currentTetromino.clone());
-        scene.add(currentTetromino.clone());
+        currentTetromino.children.forEach(cube => {
+            const newCube = cube.clone();
+            newCube.position.add(currentTetromino.position);
+            scene.add(newCube);
+            blocks.push(newCube);
+        });
+        scene.remove(currentTetromino);
         // Remove filled lines
         removeFilledLines();
         // Create a new tetromino
@@ -353,5 +363,38 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-// Start the animation loop
-animate();
+// Function to start the game
+function startGame() {
+    hideOverlay();
+    blocks.forEach(block => scene.remove(block));
+    blocks = [];
+    currentTetromino = getRandomTetromino();
+    scene.add(currentTetromino);
+    animate();
+}
+
+// Function to show the overlay
+function showOverlay() {
+    document.getElementById('overlay').style.display = 'flex';
+    document.getElementById('helpButtonInGame').style.display = 'none';
+}
+
+// Function to hide the overlay
+function hideOverlay() {
+    document.getElementById('overlay').style.display = 'none';
+    document.getElementById('helpButtonInGame').style.display = 'block';
+}
+
+// Event listeners for buttons
+document.getElementById('startButton').addEventListener('click', startGame);
+document.getElementById('helpButton').addEventListener('click', () => {
+    const helpText = document.getElementById('helpTextOverlay');
+    helpText.style.display = helpText.style.display === 'none' ? 'block' : 'none';
+});
+document.getElementById('helpButtonInGame').addEventListener('click', () => {
+    const helpText = document.getElementById('helpText');
+    helpText.style.display = helpText.style.display === 'none' ? 'block' : 'none';
+});
+
+// Show the overlay initially
+showOverlay();
