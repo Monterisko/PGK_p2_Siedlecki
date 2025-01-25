@@ -1,49 +1,50 @@
 // Import Three.js
 import * as THREE from 'three';
 
-// Create the scene
+// Utworzenie sceny
 const scene = new THREE.Scene();
 
-// Create a camera
+// Utworzenie kamery
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.z = 20;
 camera.position.y = 10;
 camera.rotation.x = 0;
 
-// Create the renderer
+// Utworzenie renderera
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// Add ambient light
-const ambientLight = new THREE.AmbientLight(0x404040, 1); // Soft white light
+// Dodanie światła otoczenia (ambient light)
+const ambientLight = new THREE.AmbientLight(0x404040, 1); // Miękkie białe światło
 scene.add(ambientLight);
 
-// Add directional light from the front
-const frontLight = new THREE.DirectionalLight(0xffffff, 1.5);
+// Dodanie światła kierunkowego z przodu
+const frontLight = new THREE.DirectionalLight(0xffffff, 1.5); // białe światło o intensywności 1.5
 frontLight.position.set(0, 10, 10);
 scene.add(frontLight);
 
-// Add directional light from the side
-const sideLight = new THREE.DirectionalLight(0xffffff, 0.8);
+// Dodanie światła kierunkowego z boku
+const sideLight = new THREE.DirectionalLight(0xffffff, 0.8); // białe światło o intensywności 0.8
 sideLight.position.set(10, 10, 0);
 scene.add(sideLight);
 
-// Add directional light from the back
-const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
+// Dodanie światła kierunkowego z tyłu
+const backLight = new THREE.DirectionalLight(0xffffff, 0.5); // białe światło o intensywności 0.5
 backLight.position.set(0, 10, -10);
 scene.add(backLight);
 
-// Add point light from above
+// Dodanie światła punktowego z góry
 const topLight = new THREE.PointLight(0xffffff, 1, 100);
 topLight.position.set(0, 20, 0);
 scene.add(topLight);
 
-// Create the room (8x20x8)
+// Wymiary pokoju (8x20x8)
 const roomWidth = 8;
 const roomHeight = 20;
 const roomDepth = 8;
 
+// Utworzenie podłogi
 const floorGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
 const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x808080, side: THREE.DoubleSide });
 const floor = new THREE.Mesh(floorGeometry, floorMaterial);
@@ -52,12 +53,14 @@ scene.add(floor);
 
 const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x404040, side: THREE.DoubleSide, transparent: true, opacity: 0.5 });
 
+// Utworzenie tylniej ściany
 const backWallGeometry = new THREE.PlaneGeometry(roomWidth, roomHeight);
 const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
 backWall.position.z = -roomDepth / 2;
 backWall.position.y = roomHeight / 2;
 scene.add(backWall);
 
+// Utworzenie lewej ściany
 const leftWallGeometry = new THREE.PlaneGeometry(roomDepth, roomHeight);
 const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
 leftWall.rotation.y = Math.PI / 2;
@@ -65,6 +68,7 @@ leftWall.position.x = -roomWidth / 2;
 leftWall.position.y = roomHeight / 2;
 scene.add(leftWall);
 
+// Utworzenie prawej ściany
 const rightWallGeometry = new THREE.PlaneGeometry(roomDepth, roomHeight);
 const rightWall = new THREE.Mesh(rightWallGeometry, wallMaterial);
 rightWall.rotation.y = -Math.PI / 2;
@@ -72,7 +76,7 @@ rightWall.position.x = roomWidth / 2;
 rightWall.position.y = roomHeight / 2;
 scene.add(rightWall);
 
-// Load textures
+// Załadaowanie tekstur dla bloków Tetrisa
 const textureLoader = new THREE.TextureLoader();
 const textures = [
     textureLoader.load("texture/I-block_retro_texture.png"),
@@ -85,8 +89,8 @@ const textures = [
     
 ];
 
-// Define tetromino shapes
-const tetrominoes = [
+// Typy bloków Tetrisa
+const blockList = [
     // I
     [
         [1, 1, 1, 1]
@@ -123,8 +127,8 @@ const tetrominoes = [
     ]
 ];
 
-// Function to create a tetromino mesh
-function createTetromino(shape, texture) {
+// Narzucenie odpowiednich tekstur na bloki
+function createblock(shape, texture) {
     const group = new THREE.Group();
     const material = new THREE.MeshStandardMaterial({ map: texture });
     shape.forEach((row, y) => {
@@ -137,26 +141,29 @@ function createTetromino(shape, texture) {
             }
         });
     });
-    group.shape = shape; // Store the shape matrix in the group
+    group.shape = shape; // Trzymanie kształtu bloku Tetris w grupie
     return group;
 }
 
-// Function to get a random tetromino
-function getRandomTetromino() {
-    const shapeIndex = Math.floor(Math.random() * tetrominoes.length);
-    const shape = tetrominoes[shapeIndex];
+// Otrzymywanie losowego bloku Tetrisa
+function getRandomblock() {
+    const shapeIndex = Math.floor(Math.random() * blockList.length);
+    const shape = blockList[shapeIndex];
     const texture = textures[shapeIndex];
-    const tetromino = createTetromino(shape, texture);
-    tetromino.position.y = roomHeight - 1;
-    return tetromino;
+    const block = createblock(shape, texture);
+    block.position.y = roomHeight - 1;
+    return block;
 }
 
-// Create the initial tetromino
-let currentTetromino;
+// Utworzenie inicjalnego bloku Tetrisa
+let currentblock;
 let blocks = [];
 let animationId;
 
-// Function to rotate a tetromino shape matrix
+let lastRotationTime = 0;
+const rotationDelay = 100; // Opóźnienie między obrotami w milisekundach
+
+// Funkcja do obracania macierzy block
 function rotateMatrix(matrix) {
     const rows = matrix.length;
     const cols = matrix[0].length;
@@ -169,143 +176,115 @@ function rotateMatrix(matrix) {
     return result;
 }
 
-// Function to rotate a tetromino around its center
-function rotateTetromino(tetromino, direction) {
-    // Rotate the shape matrix
-    const newShape = rotateMatrix(tetromino.shape);
+// Funkcja do obracania bloku wokół jego środka
+function rotateblock(block, direction) {
+    // Obracanie macierzy kształtu
+    const newShape = rotateMatrix(block.shape);
 
-    // Clear the current tetromino group
-    const oldPosition = tetromino.position.clone();
-    scene.remove(tetromino);
+    // Czyszczenie obecnej grupy
+    const oldPosition = block.position.clone();
+    scene.remove(block);
 
-    // Create new cubes based on the rotated shape
-    const material = new THREE.MeshStandardMaterial({ map: tetromino.children[0].material.map });
-    const newTetromino = new THREE.Group();
+    // Tworzenie nowych kostek na podstawie obróconego kształtu
+    const material = new THREE.MeshStandardMaterial({ map: block.children[0].material.map });
+    const newblock = new THREE.Group();
     newShape.forEach((row, y) => {
         row.forEach((value, x) => {
             if (value) {
                 const geometry = new THREE.BoxGeometry(1, 1, 1);
                 const cube = new THREE.Mesh(geometry, material);
                 cube.position.set(x, -y, 0);
-                newTetromino.add(cube);
+                newblock.add(cube);
             }
         });
     });
 
-    newTetromino.shape = newShape; // Update the shape matrix in the group
-    newTetromino.position.copy(oldPosition);
-    scene.add(newTetromino);
+    newblock.shape = newShape; // Aktualizacja macierzy kształtu w grupie
+    newblock.position.copy(oldPosition);
+    scene.add(newblock);
 
-    // Check for collisions and adjust position if necessary
-    if (checkCollision(newTetromino)) {
-        // Try to move tetromino to the left or right to allow rotation
-        newTetromino.position.x -= 1;
-        if (checkCollision(newTetromino)) {
-            newTetromino.position.x += 2;
-            if (checkCollision(newTetromino)) {
-                newTetromino.position.x -= 1;
-                newTetromino = rotateTetromino(newTetromino, -direction); // Revert rotation if no valid position found
+    // Sprawdzanie kolizji i dostosowywanie pozycji w razie potrzeby
+    if (checkCollision(newblock)) {
+        // Próba przesunięcia block w lewo lub prawo, aby umożliwić obrót
+        newblock.position.x -= 1;
+        if (checkCollision(newblock)) {
+            newblock.position.x += 2;
+            if (checkCollision(newblock)) {
+                newblock.position.x -= 1;
+                scene.remove(newblock);
+                scene.add(block); // Przywracanie starego block, jeśli nie znaleziono odpowiedniej pozycji
+                return block;
             }
         }
     }
 
-    return newTetromino;
+    return newblock;
 }
 
-
-// Function to rotate the room around its center
-function rotateRoom(direction) {
-    const center = new THREE.Vector3(0, roomHeight / 2, 0);
-    const matrix = new THREE.Matrix4();
-    matrix.makeRotationY(THREE.MathUtils.degToRad(direction * 15));
-
-    camera.position.sub(center);
-    camera.position.applyMatrix4(matrix);
-    camera.position.add(center);
-    camera.lookAt(center);
-
-    console.log(`Camera rotated ${direction * 15} degrees`);
-}
-
-// Function to handle key presses
+// Funkcja do obsługi naciśnięć klawiszy
 function handleKeyPress(event) {
+    const currentTime = Date.now();
+    if (currentTime - lastRotationTime < rotationDelay) {
+        return; // Ignorowanie naciśnięcia klawisza, jeśli opóźnienie nie minęło
+    }
+
     switch (event.key) {
         case 'a':
         case 'A':
-            // Move tetromino left
-            currentTetromino.position.x -= 1;
-            if (checkCollision(currentTetromino)) {
-                currentTetromino.position.x += 1;
+            // Przesuwanie block w lewo
+            currentblock.position.x -= 1;
+            if (checkCollision(currentblock)) {
+                currentblock.position.x += 1;
             }
             break;
         case 'd':
         case 'D':
-            // Move tetromino right
-            currentTetromino.position.x += 1;
-            if (checkCollision(currentTetromino)) {
-                currentTetromino.position.x -= 1;
+            // Przesuwanie block w prawo
+            currentblock.position.x += 1;
+            if (checkCollision(currentblock)) {
+                currentblock.position.x -= 1;
             }
             break;
         case 'w':
         case 'W':
-            // Move tetromino forward (into the screen)
-            currentTetromino.position.z -= 1;
-            if (checkCollision(currentTetromino)) {
-                currentTetromino.position.z += 1;
+            // Przesuwanie block do przodu (w głąb ekranu)
+            currentblock.position.z -= 1;
+            if (checkCollision(currentblock)) {
+                currentblock.position.z += 1;
             }
             break;
         case 's':
         case 'S':
-            // Move tetromino backward (out of the screen)
-            currentTetromino.position.z += 1;
-            if (checkCollision(currentTetromino)) {
-                currentTetromino.position.z -= 1;
+            // Przesuwanie block do tyłu (na zewnątrz ekranu)
+            currentblock.position.z += 1;
+            if (checkCollision(currentblock)) {
+                currentblock.position.z -= 1;
             }
             break;
         case 'q':
         case 'Q':
-            // Rotate tetromino counterclockwise
-            currentTetromino = rotateTetromino(currentTetromino, 1);
-            if (checkCollision(currentTetromino)) {
-                // Try to move tetromino to the left or right to allow rotation
-                currentTetromino.position.x -= 1;
-                if (checkCollision(currentTetromino)) {
-                    currentTetromino.position.x += 2;
-                    if (checkCollision(currentTetromino)) {
-                        currentTetromino.position.x -= 1;
-                        currentTetromino = rotateTetromino(currentTetromino, -1);
-                    }
-                }
-            }
+            // Obracanie block przeciwnie do ruchu wskazówek zegara
+            currentblock = rotateblock(currentblock, 1);
+            lastRotationTime = currentTime;
             break;
         case 'e':
         case 'E':
-            // Rotate tetromino clockwise
-            currentTetromino = rotateTetromino(currentTetromino, -1);
-            if (checkCollision(currentTetromino)) {
-                // Try to move tetromino to the left or right to allow rotation
-                currentTetromino.position.x -= 1;
-                if (checkCollision(currentTetromino)) {
-                    currentTetromino.position.x += 2;
-                    if (checkCollision(currentTetromino)) {
-                        currentTetromino.position.x -= 1;
-                        currentTetromino = rotateTetromino(currentTetromino, 1);
-                    }
-                }
-            }
+            // Obracanie block zgodnie z ruchem wskazówek zegara
+            currentblock = rotateblock(currentblock, -1);
+            lastRotationTime = currentTime;
             break;
         case 'ArrowLeft':
-            // Rotate room counterclockwise
+            // Obracanie pokoju przeciwnie do ruchu wskazówek zegara
             rotateRoom(-1);
             break;
         case 'ArrowRight':
-            // Rotate room clockwise
+            // Obracanie pokoju zgodnie z ruchem wskazówek zegara
             rotateRoom(1);
             break;
     }
 }
 
-// Add event listener for key presses
+// Dodawanie nasłuchiwania na naciśnięcia klawiszy
 document.addEventListener('keydown', handleKeyPress);
 
 // Funkcja do usuwania wypełnionych poziomych linii
@@ -328,7 +307,7 @@ function removeFilledLines() {
     // Znajdowanie i usuwanie wypełnionych poziomych linii
     Object.keys(lines).forEach(y => {
         Object.keys(lines[y]).forEach(z => {
-            if (lines[y][z].length >= roomWidth - 1) { // Sprawdzanie, czy liczba bloków w linii jest równa szerokości pokoju
+            if (lines[y][z].length >= roomWidth - 1) { // Sprawdzanie, czy liczba bloków w linii jest równa szerokości pokoju - 1
                 // Usuwanie bloków w wypełnionej linii
                 lines[y][z].forEach(cube => {
                     scene.remove(cube); // Usuwanie bloku ze sceny
@@ -353,9 +332,9 @@ function removeFilledLines() {
 }
 
 // Funkcja do sprawdzania kolizji
-function checkCollision(tetromino) {
-    for (let i = 0; i < tetromino.children.length; i++) {
-        const cube = tetromino.children[i];
+function checkCollision(block) {
+    for (let i = 0; i < block.children.length; i++) {
+        const cube = block.children[i];
         const cubePosition = new THREE.Vector3();
         cube.getWorldPosition(cubePosition);
 
@@ -392,83 +371,84 @@ function checkCollision(tetromino) {
 function animate() {
     animationId = requestAnimationFrame(animate); // Żądanie kolejnej klatki animacji
 
-    // Przesuwanie tetromino w dół
-    currentTetromino.position.y -= 0.05; // Przesuwanie tetromino w dół o 0.05 jednostki
-    if (checkCollision(currentTetromino)) { // Sprawdzanie kolizji
-        currentTetromino.position.y += 0.05; // Cofanie ruchu, jeśli wystąpiła kolizja
-        // Zatrzymywanie tetromino w punkcie kolizji
-        currentTetromino.children.forEach(cube => {
+    // Przesuwanie block w dół
+    currentblock.position.y -= 0.05; // Przesuwanie block w dół o 0.05 jednostki
+    if (checkCollision(currentblock)) { // Sprawdzanie kolizji
+        currentblock.position.y += 0.05; // Cofanie ruchu, jeśli wystąpiła kolizja
+        // Zatrzymywanie block w punkcie kolizji
+        currentblock.children.forEach(cube => {
             const newCube = cube.clone(); // Klonowanie bloku
-            newCube.position.add(currentTetromino.position); // Dodawanie pozycji tetromino do pozycji bloku
+            newCube.position.add(currentblock.position); // Dodawanie pozycji block do pozycji bloku
             scene.add(newCube); // Dodawanie nowego bloku do sceny
             blocks.push(newCube); // Dodawanie nowego bloku do tablicy blocks
         });
-        scene.remove(currentTetromino); // Usuwanie tetromino ze sceny
+        scene.remove(currentblock); // Usuwanie block ze sceny
         // Usuwanie wypełnionych poziomych linii
         removeFilledLines();
-        // Tworzenie nowego tetromino
-        currentTetromino = getRandomTetromino();
-        if (checkCollision(currentTetromino)) { // Sprawdzanie kolizji dla nowego tetromino
-            endGame(); // Kończenie gry, jeśli nowo utworzone tetromino koliduje
+        // Tworzenie nowego block
+        currentblock = getRandomblock();
+        if (checkCollision(currentblock)) { // Sprawdzanie kolizji dla nowego block
+            endGame(); // Kończenie gry, jeśli nowo utworzone block koliduje
             return;
         }
-        scene.add(currentTetromino); // Dodawanie nowego tetromino do sceny
+        scene.add(currentblock); // Dodawanie nowego block do sceny
     }
 
     renderer.render(scene, camera); // Renderowanie sceny z użyciem kamery
 }
 
-// Function to end the game
+// Zakończenie gry
 function endGame() {
     // Stop the animation loop
     cancelAnimationFrame(animationId);
     showGameOverOverlay();
 }
 
-// Function to show the game over overlay
+// Wyświetlanie ekranu końca gry
 function showGameOverOverlay() {
     document.getElementById('gameOverOverlay').style.display = 'flex';
 }
 
-// Function to hide the game over overlay
+// Zamykanie ekranu końca gry
 function hideGameOverOverlay() {
     document.getElementById('gameOverOverlay').style.display = 'none';
 }
 
-// Event listeners for game over buttons
+// Listener dla przycisku restart
 document.getElementById('restartButton').addEventListener('click', () => {
     hideGameOverOverlay();
     startGame();
 });
 
+// Listener dla przycisku pomocy na ekranie końca gry
 document.getElementById('helpButtonGameOver').addEventListener('click', () => {
     const helpText = document.getElementById('helpTextOverlay');
     helpText.style.display = helpText.style.display === 'none' ? 'block' : 'none';
 });
 
-// Function to start the game
+// Start gry
 function startGame() {
     hideOverlay();
     blocks.forEach(block => scene.remove(block));
     blocks = [];
-    currentTetromino = getRandomTetromino();
-    scene.add(currentTetromino);
+    currentblock = getRandomblock();
+    scene.add(currentblock);
     animate();
 }
 
-// Function to show the overlay
+// Wyświetlenie overlay
 function showOverlay() {
     document.getElementById('overlay').style.display = 'flex';
     document.getElementById('helpButtonInGame').style.display = 'none';
 }
 
-// Function to hide the overlay
+// Ukrycie overlay
 function hideOverlay() {
     document.getElementById('overlay').style.display = 'none';
     document.getElementById('helpButtonInGame').style.display = 'block';
 }
 
-// Event listeners for buttons
+// Listener dla przycisków
 document.getElementById('startButton').addEventListener('click', startGame);
 document.getElementById('helpButton').addEventListener('click', () => {
     const helpText = document.getElementById('helpTextOverlay');
@@ -479,5 +459,5 @@ document.getElementById('helpButtonInGame').addEventListener('click', () => {
     helpText.style.display = helpText.style.display === 'none' ? 'block' : 'none';
 });
 
-// Show the overlay initially
+// Inicjalizacja overlay
 showOverlay();
