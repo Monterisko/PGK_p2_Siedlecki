@@ -35,7 +35,7 @@ backLight.position.set(0, 10, -10);
 scene.add(backLight);
 
 // Dodanie światła punktowego z góry
-const topLight = new THREE.PointLight(0xffffff, 1, 100);
+const topLight = new THREE.PointLight(0xffffff, 2, 25);
 topLight.position.set(0, 20, 0);
 scene.add(topLight);
 
@@ -422,7 +422,7 @@ document.getElementById('restartButton').addEventListener('click', () => {
 
 // Listener dla przycisku pomocy na ekranie końca gry
 document.getElementById('helpButtonGameOver').addEventListener('click', () => {
-    const helpText = document.getElementById('helpTextOverlay');
+    const helpText = document.getElementById('helpTextGameOver');
     helpText.style.display = helpText.style.display === 'none' ? 'block' : 'none';
 });
 
