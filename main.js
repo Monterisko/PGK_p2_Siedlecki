@@ -221,6 +221,18 @@ function rotateblock(block, direction) {
     return newblock;
 }
 
+// Function to rotate the room around its center
+function rotateRoom(direction) {
+    const center = new THREE.Vector3(0, roomHeight / 2, 0);
+    const matrix = new THREE.Matrix4();
+    matrix.makeRotationY(THREE.MathUtils.degToRad(direction * 15));
+    camera.position.sub(center);
+    camera.position.applyMatrix4(matrix);
+    camera.position.add(center);
+    camera.lookAt(center);
+    console.log(`Camera rotated ${direction * 15} degrees`);
+}
+
 // Funkcja do obsługi naciśnięć klawiszy
 function handleKeyPress(event) {
     const currentTime = Date.now();
@@ -274,7 +286,7 @@ function handleKeyPress(event) {
             lastRotationTime = currentTime;
             break;
         case 'ArrowLeft':
-            // Obracanie pokoju przeciwnie do ruchu wskazówek zegara
+            // Obr  acanie pokoju przeciwnie do ruchu wskazówek zegara
             rotateRoom(-1);
             break;
         case 'ArrowRight':
